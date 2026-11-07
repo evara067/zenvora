@@ -1,0 +1,68 @@
+
+import { Routes, Route, useLocation } from "react-router-dom";
+
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+
+import Home from "./pages/Home";
+import Shop from "./pages/Shop";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import Admin from "./pages/Admin";
+import ProductDetails from "./pages/ProductDetails";
+
+import Register from "./pages/Register";
+import Login from "./pages/Login";
+import Profile from "./Profile";
+
+import { CartProvider } from "./context/CartContext";
+
+function NotFound() {
+  return (
+    <div className="text-center py-32 bg-[#090909] text-white min-h-screen">
+      <h1 className="text-5xl font-black text-[#D6B56D]">
+        404
+      </h1>
+      <p className="mt-3 text-gray-400">
+        Page not found
+      </p>
+    </div>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
+
+  return (
+    <>
+      {!isAdmin && <Navbar />}
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/shop" element={<Shop />} />
+        <Route path="/product/:id" element={<ProductDetails />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/profile" element={<Profile />} />
+
+        <Route path="/admin" element={<Admin />} />
+
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+
+      {!isAdmin && <Footer />}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <CartProvider>
+      <AppContent />
+    </CartProvider>
+  );
+}
