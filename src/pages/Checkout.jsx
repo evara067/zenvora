@@ -22,12 +22,26 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [smsPreview, setSmsPreview] = useState("");
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  // DEMO SMS FUNCTION
+  // This does NOT send a real SMS.
+  const sendDemoSMS = ({ name, orderId, total }) => {
+    return `Hello ${name},
+
+Your order has been successfully placed!
+
+Order ID: ${orderId}
+Total Amount: Tk ${total}
+
+Thank you for shopping with Zenvora!`;
   };
 
   const handleSubmit = async (e) => {
@@ -56,9 +70,11 @@ export default function Checkout() {
 
         total: Number(total),
         status: "Pending",
+        smsStatus: "demo_not_sent",
         createdAt: serverTimestamp(),
       };
 
+      // Save order to Firebase
       const docRef = await addDoc(
         collection(db, "orders"),
         orderData
@@ -66,13 +82,22 @@ export default function Checkout() {
 
       setOrderId(docRef.id);
 
+      // Prepare demo SMS
+      const message = sendDemoSMS({
+        name: formData.name.trim(),
+        orderId: docRef.id,
+        total: Number(total),
+      });
+
+      setSmsPreview(message);
+
+      // Clear cart
       clearCart();
 
       setSuccess(true);
 
     } catch (error) {
       console.error("Order Error:", error);
-
       alert("Order failed: " + error.message);
 
     } finally {
@@ -82,7 +107,7 @@ export default function Checkout() {
 
   if (success) {
     return (
-      <div className="text-center py-32 px-5">
+      <div className="text-center py-20 px-5">
 
         <div className="text-6xl mb-5">🎉</div>
 
@@ -97,6 +122,23 @@ export default function Checkout() {
         <p className="mt-3 font-semibold break-all">
           Order ID: {orderId}
         </p>
+
+        {/* SMS DEMO PREVIEW */}
+        <div className="max-w-md mx-auto mt-8 bg-gray-50 border rounded-2xl p-5 text-left">
+
+          <h2 className="font-bold text-lg mb-2">
+            📱 SMS Notification (Demo)
+          </h2>
+
+          <p className="text-sm text-orange-600 font-semibold mb-3">
+            Demo Mode – SMS Not Sent
+          </p>
+
+          <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
+            {smsPreview}
+          </pre>
+
+        </div>
 
         <Link
           to="/shop"
