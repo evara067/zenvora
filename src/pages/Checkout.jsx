@@ -1,8 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
-import { Link } from "react-router-dom";
-import { db } from "../firebase/config";
+import { Link, useNavigate } from "react-router-dom";
+import { db, auth } from "../firebase/config";
+
+import { onAuthStateChanged } from "firebase/auth";
+
 import {
   collection,
   addDoc,
@@ -11,6 +14,11 @@ import {
 
 export default function Checkout() {
   const { cart, total, clearCart } = useCart();
+
+  const navigate = useNavigate();
+
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -22,8 +30,26 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
-  const [smsPreview, setSmsPreview] = useState("");
 
+  // Check Firebase Authentication
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser) => {
+        setUser(currentUser);
+        setAuthReady(true);
+
+        if (!currentUser) {
+          clearCart();
+          navigate("/login", { replace: true });
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, [navigate, clearCart]);
+
+  // Handle input changes
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -31,28 +57,18 @@ export default function Checkout() {
     });
   };
 
-  // DEMO SMS FUNCTION
-  // This does NOT send a real SMS.
-  const sendDemoSMS = ({ name, orderId, total }) => {
-    return `Hello ${name},
-
-Your order has been successfully placed!
-
-Order ID: ${orderId}
-Total Amount: Tk ${total}
-
-Thank you for shopping with Zenvora!`;
-  };
-
+  // Place Order
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (cart.length === 0 || loading) return;
+    if (!user || cart.length === 0 || loading) return;
 
     setLoading(true);
 
     try {
       const orderData = {
+        userId: user.uid,
+
         customer: {
           name: formData.name.trim(),
           email: formData.email.trim(),
@@ -69,8 +85,11 @@ Thank you for shopping with Zenvora!`;
         })),
 
         total: Number(total),
+
         status: "Pending",
+
         smsStatus: "demo_not_sent",
+
         createdAt: serverTimestamp(),
       };
 
@@ -82,22 +101,14 @@ Thank you for shopping with Zenvora!`;
 
       setOrderId(docRef.id);
 
-      // Prepare demo SMS
-      const message = sendDemoSMS({
-        name: formData.name.trim(),
-        orderId: docRef.id,
-        total: Number(total),
-      });
-
-      setSmsPreview(message);
-
-      // Clear cart
+      // Clear cart after successful order
       clearCart();
 
       setSuccess(true);
 
     } catch (error) {
       console.error("Order Error:", error);
+
       alert("Order failed: " + error.message);
 
     } finally {
@@ -105,11 +116,28 @@ Thank you for shopping with Zenvora!`;
     }
   };
 
+  // Authentication Loading
+  if (!authReady) {
+    return (
+      <div className="text-center py-32">
+        Checking authentication...
+      </div>
+    );
+  }
+
+  // User must login
+  if (!user) {
+    return null;
+  }
+
+  // Order Success Page
   if (success) {
     return (
       <div className="text-center py-20 px-5">
 
-        <div className="text-6xl mb-5">🎉</div>
+        <div className="text-6xl mb-5">
+          🎉
+        </div>
 
         <h1 className="text-3xl font-black text-green-600">
           Order Placed Successfully!
@@ -123,23 +151,6 @@ Thank you for shopping with Zenvora!`;
           Order ID: {orderId}
         </p>
 
-        {/* SMS DEMO PREVIEW */}
-        <div className="max-w-md mx-auto mt-8 bg-gray-50 border rounded-2xl p-5 text-left">
-
-          <h2 className="font-bold text-lg mb-2">
-            📱 SMS Notification (Demo)
-          </h2>
-
-          <p className="text-sm text-orange-600 font-semibold mb-3">
-            Demo Mode – SMS Not Sent
-          </p>
-
-          <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
-            {smsPreview}
-          </pre>
-
-        </div>
-
         <Link
           to="/shop"
           className="inline-block mt-7 bg-[#20204A] text-white px-8 py-3 rounded-xl"
@@ -151,6 +162,7 @@ Thank you for shopping with Zenvora!`;
     );
   }
 
+  // Empty Cart
   if (cart.length === 0) {
     return (
       <div className="text-center py-32">
@@ -178,6 +190,8 @@ Thank you for shopping with Zenvora!`;
       </h1>
 
       <div className="grid md:grid-cols-2 gap-10">
+
+        {/* Customer Information */}
 
         <form
           onSubmit={handleSubmit}
@@ -234,13 +248,17 @@ Thank you for shopping with Zenvora!`;
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !user}
             className="w-full mt-7 bg-[#20204A] text-white p-4 rounded-xl font-bold hover:bg-purple-700 transition disabled:opacity-60"
           >
-            {loading ? "Processing Order..." : "Place Order"}
+            {loading
+              ? "Processing Order..."
+              : "Place Order"}
           </button>
 
         </form>
+
+        {/* Order Summary */}
 
         <div className="bg-gray-50 p-7 rounded-2xl h-fit">
 
@@ -273,11 +291,13 @@ Thank you for shopping with Zenvora!`;
           <div className="border-t pt-5 mt-5">
 
             <div className="flex justify-between text-xl font-black">
+
               <span>Total</span>
 
               <span>
                 ৳{Number(total).toLocaleString("en-BD")}
               </span>
+
             </div>
 
           </div>
@@ -285,6 +305,7 @@ Thank you for shopping with Zenvora!`;
         </div>
 
       </div>
+
     </div>
   );
 }
