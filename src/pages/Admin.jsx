@@ -20,6 +20,7 @@ import {
   Package,
   XCircle,
   RefreshCw,
+  MessageSquare,
 } from "lucide-react";
 
 const ADMIN_UID = "YQmIqIxPGJPcH6urBJGMjZWbNwB3";
@@ -128,6 +129,46 @@ export default function Admin() {
     0
   );
 
+  const demoSMSCount = orders.filter(
+    (order) => order.smsStatus === "demo_not_sent"
+  ).length;
+
+  const sentSMSCount = orders.filter(
+    (order) => order.smsStatus === "sent"
+  ).length;
+
+  const failedSMSCount = orders.filter(
+    (order) => order.smsStatus === "failed"
+  ).length;
+
+  const getSMSInfo = (status) => {
+    if (status === "sent") {
+      return {
+        label: "SMS Sent",
+        style: "bg-green-500/15 text-green-400 border-green-500/30",
+      };
+    }
+
+    if (status === "failed") {
+      return {
+        label: "SMS Failed",
+        style: "bg-red-500/15 text-red-400 border-red-500/30",
+      };
+    }
+
+    if (status === "demo_not_sent") {
+      return {
+        label: "Demo – Not Sent",
+        style: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+      };
+    }
+
+    return {
+      label: "Not Available",
+      style: "bg-gray-500/15 text-gray-400 border-gray-500/30",
+    };
+  };
+
   const formatDate = (timestamp) => {
     if (!timestamp?.toDate) return "Date unavailable";
 
@@ -190,6 +231,7 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* DASHBOARD STATS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
 
           <div className="bg-[#1c1c1c] border border-white/10 p-6 rounded-2xl">
@@ -218,8 +260,39 @@ export default function Admin() {
 
         </div>
 
+        {/* SMS STATISTICS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
+
+          <div className="bg-[#1c1c1c] border border-yellow-500/20 p-6 rounded-2xl">
+            <MessageSquare className="text-yellow-400 mb-4" size={27} />
+            <p className="text-gray-400">Demo SMS</p>
+            <h2 className="text-3xl font-black text-yellow-400 mt-2">
+              {demoSMSCount}
+            </h2>
+            <p className="text-xs text-gray-500 mt-2">Not actually sent</p>
+          </div>
+
+          <div className="bg-[#1c1c1c] border border-green-500/20 p-6 rounded-2xl">
+            <MessageSquare className="text-green-400 mb-4" size={27} />
+            <p className="text-gray-400">SMS Sent</p>
+            <h2 className="text-3xl font-black text-green-400 mt-2">
+              {sentSMSCount}
+            </h2>
+          </div>
+
+          <div className="bg-[#1c1c1c] border border-red-500/20 p-6 rounded-2xl">
+            <MessageSquare className="text-red-400 mb-4" size={27} />
+            <p className="text-gray-400">SMS Failed</p>
+            <h2 className="text-3xl font-black text-red-400 mt-2">
+              {failedSMSCount}
+            </h2>
+          </div>
+
+        </div>
+
         <AdminProductManager />
 
+        {/* CUSTOMER ORDERS */}
         <div className="bg-[#1c1c1c] border border-white/10 rounded-2xl p-5 md:p-7 mt-10">
 
           <div className="flex justify-between items-center mb-7">
@@ -256,159 +329,171 @@ export default function Admin() {
 
           <div className="space-y-6">
 
-            {orders.map((order) => (
+            {orders.map((order) => {
+              const smsInfo = getSMSInfo(order.smsStatus);
 
-              <div
-                key={order.id}
-                className="border border-white/10 rounded-2xl p-5 md:p-6"
-              >
+              return (
+                <div
+                  key={order.id}
+                  className="border border-white/10 rounded-2xl p-5 md:p-6"
+                >
 
-                <div className="flex flex-wrap justify-between gap-4 mb-6">
+                  <div className="flex flex-wrap justify-between gap-4 mb-6">
 
-                  <div>
-                    <h3 className="font-bold text-xl">
-                      {order.customer?.name || "Unknown Customer"}
-                    </h3>
+                    <div>
+                      <h3 className="font-bold text-xl">
+                        {order.customer?.name || "Unknown Customer"}
+                      </h3>
 
-                    <p className="text-sm text-gray-400 mt-1">
-                      Order ID: {order.id}
-                    </p>
-
-                    <p className="text-sm text-gray-500 mt-1">
-                      {formatDate(order.createdAt)}
-                    </p>
-                  </div>
-
-                  <span className={`h-fit px-4 py-2 rounded-full text-sm font-bold ${getStatusStyle(order.status || "Pending")}`}>
-                    {order.status || "Pending"}
-                  </span>
-
-                </div>
-
-                <div className="bg-[#111] rounded-xl p-4 mb-6">
-
-                  <h4 className="font-bold text-yellow-400 mb-3">
-                    Customer Information
-                  </h4>
-
-                  <p className="text-sm mb-2">
-                    <strong>Name:</strong> {order.customer?.name || "N/A"}
-                  </p>
-
-                  <p className="text-sm mb-2">
-                    <strong>Email:</strong> {order.customer?.email || "N/A"}
-                  </p>
-
-                  <p className="text-sm mb-2">
-                    <strong>Phone:</strong> {order.customer?.phone || "N/A"}
-                  </p>
-
-                  <p className="text-sm break-words">
-                    <strong>Address:</strong> {order.customer?.address || "N/A"}
-                  </p>
-
-                </div>
-
-                <h4 className="font-bold mb-4">
-                  Ordered Products
-                </h4>
-
-                <div className="space-y-4">
-
-                  {(order.items || []).map((item, index) => (
-
-                    <div
-                      key={`${item.id || item.name}-${index}`}
-                      className="flex items-center gap-4 border-b border-white/10 pb-4"
-                    >
-
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.name || "Product"}
-                          className="w-16 h-16 object-contain bg-white rounded-lg p-1"
-                        />
-                      )}
-
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold">
-                          {item.name || "Product"}
-                        </p>
-
-                        <p className="text-sm text-gray-400 mt-1">
-                          ৳{item.price} × {item.quantity}
-                        </p>
-                      </div>
-
-                      <p className="font-bold text-yellow-400">
-                        ৳{(
-                          Number(item.price || 0) *
-                          Number(item.quantity || 0)
-                        ).toLocaleString("en-BD")}
+                      <p className="text-sm text-gray-400 mt-1">
+                        Order ID: {order.id}
                       </p>
+
+                      <p className="text-sm text-gray-500 mt-1">
+                        {formatDate(order.createdAt)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-start sm:items-end gap-2">
+
+                      <span className={`h-fit px-4 py-2 rounded-full text-sm font-bold ${getStatusStyle(order.status || "Pending")}`}>
+                        {order.status || "Pending"}
+                      </span>
+
+                      {/* SMS STATUS */}
+                      <span className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border ${smsInfo.style}`}>
+                        <MessageSquare size={14} />
+                        {smsInfo.label}
+                      </span>
 
                     </div>
 
-                  ))}
+                  </div>
 
-                </div>
+                  <div className="bg-[#111] rounded-xl p-4 mb-6">
 
-                <div className="flex justify-between items-center mt-6 pt-5 border-t border-white/10">
-                  <span className="font-bold">Total Amount</span>
+                    <h4 className="font-bold text-yellow-400 mb-3">
+                      Customer Information
+                    </h4>
 
-                  <span className="text-xl font-black text-yellow-400">
-                    ৳{Number(order.total || 0).toLocaleString("en-BD")}
-                  </span>
-                </div>
+                    <p className="text-sm mb-2">
+                      <strong>Name:</strong> {order.customer?.name || "N/A"}
+                    </p>
 
-                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                    <p className="text-sm mb-2">
+                      <strong>Email:</strong> {order.customer?.email || "N/A"}
+                    </p>
 
-                  <div className="flex-1">
+                    <p className="text-sm mb-2">
+                      <strong>Phone:</strong> {order.customer?.phone || "N/A"}
+                    </p>
 
-                    <label className="block text-sm text-gray-400 mb-2">
-                      Update Order Status
-                    </label>
-
-                    <select
-                      value={order.status || "Pending"}
-                      disabled={updating === order.id}
-                      onChange={(e) =>
-                        handleStatusChange(order.id, e.target.value)
-                      }
-                      className="w-full bg-[#111] border border-yellow-600/30 rounded-xl px-4 py-3 outline-none focus:border-yellow-500 text-white"
-                    >
-                      {statuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
+                    <p className="text-sm break-words">
+                      <strong>Address:</strong> {order.customer?.address || "N/A"}
+                    </p>
 
                   </div>
 
-                  <div className="flex items-end">
+                  <h4 className="font-bold mb-4">
+                    Ordered Products
+                  </h4>
 
-                    <button
-                      onClick={() => handleDelete(order.id)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600/15 text-red-400 border border-red-500/30 px-5 py-3 rounded-xl hover:bg-red-600 hover:text-white transition"
-                    >
-                      <Trash2 size={18} />
-                      Delete Order
-                    </button>
+                  <div className="space-y-4">
+
+                    {(order.items || []).map((item, index) => (
+
+                      <div
+                        key={`${item.id || item.name}-${index}`}
+                        className="flex items-center gap-4 border-b border-white/10 pb-4"
+                      >
+
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.name || "Product"}
+                            className="w-16 h-16 object-contain bg-white rounded-lg p-1"
+                          />
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold">
+                            {item.name || "Product"}
+                          </p>
+
+                          <p className="text-sm text-gray-400 mt-1">
+                            ৳{item.price} × {item.quantity}
+                          </p>
+                        </div>
+
+                        <p className="font-bold text-yellow-400">
+                          ৳{(
+                            Number(item.price || 0) *
+                            Number(item.quantity || 0)
+                          ).toLocaleString("en-BD")}
+                        </p>
+
+                      </div>
+
+                    ))}
 
                   </div>
 
+                  <div className="flex justify-between items-center mt-6 pt-5 border-t border-white/10">
+                    <span className="font-bold">Total Amount</span>
+
+                    <span className="text-xl font-black text-yellow-400">
+                      ৳{Number(order.total || 0).toLocaleString("en-BD")}
+                    </span>
+                  </div>
+
+                  <div className="mt-6 flex flex-col sm:flex-row gap-3">
+
+                    <div className="flex-1">
+
+                      <label className="block text-sm text-gray-400 mb-2">
+                        Update Order Status
+                      </label>
+
+                      <select
+                        value={order.status || "Pending"}
+                        disabled={updating === order.id}
+                        onChange={(e) =>
+                          handleStatusChange(order.id, e.target.value)
+                        }
+                        className="w-full bg-[#111] border border-yellow-600/30 rounded-xl px-4 py-3 outline-none focus:border-yellow-500 text-white"
+                      >
+                        {statuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+
+                    </div>
+
+                    <div className="flex items-end">
+
+                      <button
+                        onClick={() => handleDelete(order.id)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600/15 text-red-400 border border-red-500/30 px-5 py-3 rounded-xl hover:bg-red-600 hover:text-white transition"
+                      >
+                        <Trash2 size={18} />
+                        Delete Order
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                  {updating === order.id && (
+                    <p className="text-yellow-400 text-xs mt-3">
+                      Updating order status...
+                    </p>
+                  )}
+
                 </div>
-
-                {updating === order.id && (
-                  <p className="text-yellow-400 text-xs mt-3">
-                    Updating order status...
-                  </p>
-                )}
-
-              </div>
-
-            ))}
+              );
+            })}
 
           </div>
         </div>
